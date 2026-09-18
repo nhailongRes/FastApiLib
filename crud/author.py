@@ -84,24 +84,6 @@ def update_author_name(author_id: int, name: str, db: Session):
         raise DatabaseError(str(e))
     db.refresh(author)
     return author
-def update_author_name(author_id: int, name: str, db: Session):
-    if not name or not name.strip():
-        raise ValidationError(detail="Name cannot be empty")
-    if len(name) > 30:
-        raise ValidationError(detail="Name too long")
-
-    author = db.query(model.Author).filter(model.Author.id == author_id).first()
-    if not author:
-        raise NotFoundError(detail="Author not found")
-
-    author.name = name
-    try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise DatabaseError(str(e))
-    db.refresh(author)
-    return author
 def delete_author(author_id:int, db:Session):
     author = db.query(model.Author).filter(model.Author.id == author_id).first()
     if not author:
