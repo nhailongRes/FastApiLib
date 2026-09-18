@@ -24,22 +24,22 @@ app.include_router(vote.router)
 # EXCEPTION HANDLER VẪN Ở ĐÂY (KHÔNG THAY ĐỔI)
 @app.exception_handler(NotFoundError)
 def not_found_handler(request, exc):
-    return JSONResponse(status_code=404, content={"detail": str(exc)})
+    return JSONResponse(status_code=404, content={"detail": str(exc.detail)})
 
 @app.exception_handler(ConflictError)
 def conflict_handler(request, exc):
-    return JSONResponse(status_code=409, content={"detail": str(exc)})
+    return JSONResponse(status_code=409, content={"detail": str(exc.detail)})
 
 @app.exception_handler(ValidationError)
 def validation_handler(request, exc):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(status_code=400, content={"detail": str(exc.detail)})
 
 @app.exception_handler(DatabaseError)
 def database_error_handler(request, exc):
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    return JSONResponse(status_code=500, content={"detail": str(exc.detail)})
 @app.exception_handler(ForbiddenError)
 def access_error_handler(request, exc):
-    return JSONResponse(status_code=403, content={"detail":str(exc)})
+    return JSONResponse(status_code=403, content={"detail":str(exc.detail)})
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

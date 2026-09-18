@@ -105,3 +105,73 @@ def test_get_author_by_country(client, auth_token, db_session):
     assert countries == ["Spain", "Spain"]
     names = {a["author_name"] for a in data}
     assert names == {"Eva", "Hai"}
+
+def test_search_author_by_name(client, auth_token, db_session):
+    db_session.add_all([
+            Author(name="Eva", country="Spain"),
+            Author(name="Hai", country="Spain"),
+            Author(name = "Hai Long", country = "Vietnam")
+        ])
+    db_session.commit()
+
+
+    response = client.get (
+        "/authors/search", params={'keyword': "Hai"}
+        ,
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    names = [a["name"] for a in data]
+    assert "Hai Long" in names
+    assert "Hai" in names
+
+def test_update_author_name(client, auth_token, db_session):
+    authors = [
+        Author(name="Nguyen Nhat Anh", country="Vietnam"),
+        Author(name="Nguyen Du", country="Vietnam"),
+        Author(name="Haruki Murakami", country="Japan"),
+        Author(name="Ernest Hemingway", country="USA"),
+    ]
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    response = client.patch(
+        "/authors/1",
+        json={
+            "name":"Nguyen Hai Long"
+        },
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == 1
+    assert data["country"] == "Vietnam"
+    assert data["name"] == "Nguyen Hai Long"
+
+def test_update_author_with_empty_string(client, auth_token, db_session):
+    authors = [
+            Author(name="Nguyen Nhat Anh", country="Vietnam"),
+            Author(name="Nguyen Du", country="Vietnam"),
+            Author(name="Haruki Murakami", country="Japan"),
+            Author(name="Ernest Hemingway", country="USA"),
+        ]
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+
+    response = client.patch(
+        "/authors/1",
+        json={
+            "name":" "
+        },
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 400
