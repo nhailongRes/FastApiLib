@@ -1,4 +1,4 @@
-from model import Author
+from model import Author,Book
 
 def test_create_author(client, auth_token):
     response = client.post(
@@ -175,3 +175,199 @@ def test_update_author_with_empty_string(client, auth_token, db_session):
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 400
+def test_update_long_author_name(client, auth_token, db_session):
+    authors = [
+                Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                Author(name="Nguyen Du", country="Vietnam"),
+                Author(name="Haruki Murakami", country="Japan"),
+                Author(name="Ernest Hemingway", country="USA"),
+            ]
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    response = client.patch(
+        "/authors/2",
+        json={
+            "name":"aaaaajkahsdfjshdfjkhsdjkfhsjkdfjhsdkjfhskjdfhkjsdhfkjskdhfkjshdfkjsdhfjksdhfjksdf"
+        },
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 400
+
+def test_update_unexisted_author(client, auth_token, db_session):
+    authors = [
+                    Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                    Author(name="Nguyen Du", country="Vietnam"),
+                    Author(name="Haruki Murakami", country="Japan"),
+                    Author(name="Ernest Hemingway", country="USA"),
+                ]
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    response = client.patch(
+        "/authors/5",
+        json={
+            "name":"Hai Long"
+        },
+        headers={"Authorization":f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 404
+
+def test_delete_author(client, auth_token, db_session):
+    authors = [
+                        Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                        Author(name="Nguyen Du", country="Vietnam"),
+                        Author(name="Haruki Murakami", country="Japan"),
+                        Author(name="Ernest Hemingway", country="USA"),
+                    ]
+
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    response = client.delete(
+        "authors/1",
+        headers={"Authorization":f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 204
+def test_delete_unknown_author(client, auth_token, db_session):
+    authors = [
+                            Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                            Author(name="Nguyen Du", country="Vietnam"),
+                            Author(name="Haruki Murakami", country="Japan"),
+                            Author(name="Ernest Hemingway", country="USA"),
+                        ]
+    db_session.add_all(authors)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    response = client.delete(
+        "authors/5",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 404
+
+def test_book_count_per_author(client, auth_token, db_session):
+    authors = [
+                            Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                            Author(name="Nguyen Du", country="Vietnam"),
+                            Author(name="Haruki Murakami", country="Japan"),
+                            Author(name="Ernest Hemingway", country="USA"),
+                        ]
+
+    books = [
+    Book(title="Nha Gia Kim", author=authors[0], published_year=2024),
+    Book(title="Nhung Ke Xuat Chung", author=authors[0], published_year=2025),
+    Book(title="Hard Things About Hard Thing", author=authors[1], published_year=2000),
+    Book(title="Tu Tot Den Vi Dai", author=authors[2], published_year=2000),
+            ]
+
+    db_session.add_all(authors)
+    db_session.add_all(books)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+
+    for b in books:
+        db_session.refresh(b)
+
+    response = client.get(
+        "authors/books",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+
+    result = {item["author_name"]: item["book_count"] for item in data}
+    assert result["Nguyen Nhat Anh"] == 2
+    assert result["Nguyen Du"] == 1
+    assert result["Haruki Murakami"] == 1
+
+def test_get_profilic_authors(client, auth_token, db_session):
+    authors = [
+                                Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                                Author(name="Nguyen Du", country="Vietnam"),
+                                Author(name="Haruki Murakami", country="Japan"),
+                                Author(name="Ernest Hemingway", country="USA"),
+    ]
+    books = [
+        Book(title="Nha Gia Kim", author=authors[0], published_year=2024),
+        Book(title="Nhung Ke Xuat Chung", author=authors[0], published_year=2025),
+        Book(title="Hard Things About Hard Thing", author=authors[1], published_year=2000),
+        Book(title="Tu Tot Den Vi Dai", author=authors[2], published_year=2000),
+        Book(title = "Zero To One", author=authors[0], published_year = 2015)
+                ]
+        
+
+    db_session.add_all(authors)
+    db_session.add_all(books)
+    db_session.commit()
+    for a in authors:
+        db_session.refresh(a)
+    
+    for b in books:
+        db_session.refresh(b)
+
+
+    response = client.get(
+        "authors/prolific",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    result = {item["author_name"] : item["book_count"] for item in data}
+    assert result["Nguyen Nhat Anh"] == 3
+
+
+def test_get_author_book_counts_including_zero(client, auth_token, db_session):
+    authors = [
+                                    Author(name="Nguyen Nhat Anh", country="Vietnam"),
+                                    Author(name="Nguyen Du", country="Vietnam"),
+                                    Author(name="Haruki Murakami", country="Japan"),
+                                    Author(name="Ernest Hemingway", country="USA"),
+                                    Author(name = "Le Quang Huy", country = "Vietnam"),
+                                    Author(name = "Nguyen Tan Dung", country = "Vietnam")
+        ]
+    books = [
+            Book(title="Nha Gia Kim", author=authors[0], published_year=2024),
+            Book(title="Nhung Ke Xuat Chung", author=authors[0], published_year=2025),
+            Book(title="Hard Things About Hard Thing", author=authors[1], published_year=2000),
+            Book(title="Tu Tot Den Vi Dai", author=authors[2], published_year=2000),
+            Book(title = "Zero To One", author=authors[0], published_year = 2015)
+            ]
+
+
+    db_session.add_all(authors)
+    db_session.add_all(books)
+    db_session.commit()
+    for a in authors :
+        db_session.refresh(a)
+    for b in books:
+        db_session.refresh(b)
+
+    response = client.get(
+        "authors/books-including-zero",
+        headers={"Authorization" : f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    result = {item["author_name"] : item["book_count"] for item in data}
+    assert result["Nguyen Nhat Anh"] == 3
+    assert result["Haruki Murakami"] == 1
+    assert result["Le Quang Huy"] == 0
+    assert result["Nguyen Tan Dung"] == 0
