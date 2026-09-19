@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-
-
+from model import User
+from security import hash_password
 load_dotenv()
 
 
@@ -41,7 +41,7 @@ def client(db_session):
 
 @pytest.fixture
 def auth_token(client):
-    client.post("users/create", json={
+    client.post("/users/create", json={
         "username":"testuser",
         "email":"test@gmail.com",
         "password":"testpass123"
@@ -51,4 +51,29 @@ def auth_token(client):
         "password":"testpass123"
     })
 
+    return response.json()["access_token"]
+
+@pytest.fixture
+def admin(client,db_session):
+    admin = User(
+        username = "admin",
+        email = "admin@example.com",
+        hashed_password= hash_password("admin123"),
+        role ="admin"
+    )
+
+    db_session.add(admin)
+    db_session.commit()
+    db_session.refresh(admin)
+    return admin
+
+@pytest.fixture 
+def login_admin(admin,client):
+    response = client.post(
+        "/users/login",
+        data={
+            "username":"admin",
+            "password":"admin123"
+        }
+    )
     return response.json()["access_token"]
